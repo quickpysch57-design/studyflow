@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # StudyFlow
 
 An intelligent student workspace that combines study planning, subject management, tasks, exams, notes, focus mode, analytics, and AI-powered study assistance.
@@ -290,3 +291,6 @@ MIT License - feel free to use for learning or commercial projects.
 ---
 
 Built with ❤️ for students everywhere.
+=======
+# studyflow
+>>>>>>> 1cbf234e421df342295254e6836d22004977a12f
