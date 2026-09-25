@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  grade         String?
+  school        String?
+  board         String?
+  studyGoals    String?
+  preferredHours Float?   @default(2)
+  preferredTime String?  @default("evening")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile       Profile?
+  subjects      Subject[]
+  chapters      Chapter[]
+  tasks         Task[]
+  exams         Exam[]
+  notes         Note[]
+  studySessions StudySession[]
+  studyPlans    StudyPlan[]
+  studyBlocks   StudyBlock[]
+  streak        Streak?
+  notifications Notification[]
+  aiConversations AiConversation[]
+  preferences   UserPreferences?
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar    String?
+  bio       String?
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subject {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  color       String   @default("#6366f1")
+  icon        String?
+  teacher     String?
+  totalChapters Int    @default(0)
+  completedChapters Int @default(0)
+  studyHours  Float    @default(0)
+  examDate    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  chapters    Chapter[]
+  tasks       Task[]
+  exams       Exam[]
+  notes       Note[]
+  studySessions StudySession[]
+  studyBlocks StudyBlock[]
+}
+
+model Chapter {
+  id              String   @id @default(cuid())
+  subjectId       String
+  subject         Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  status          ChapterStatus @default(NOT_STARTED)
+  progress        Int      @default(0)
+  lastStudiedAt   DateTime?
+  studyTime       Float    @default(0)
+  revisionCount   Int      @default(0)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum ChapterStatus {
+  NOT_STARTED
+  LEARNING
+  PRACTICING
+  COMPLETED
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  type        TaskType    @default(HOMEWORK)
+  priority    Priority    @default(MEDIUM)
+  dueDate     DateTime?
+  startTime   DateTime?
+  duration    Int?        // minutes
+  completed   Boolean     @default(false)
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+enum TaskType {
+  HOMEWORK
+  ASSIGNMENT
+  PROJECT
+  REVISION
+  EXAM_PREPARATION
+  PERSONAL
+  OTHER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Exam {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId       String
+  subject         Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name            String
+  date            DateTime
+  preparationPct  Int      @default(0)
+  syllabus        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title       String
+  content     String   // JSON content for rich text
+  tags        String[]
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StudySession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  chapterId   String?
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int      // minutes
+  type        SessionType @default(FOCUS)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+enum SessionType {
+  FOCUS
+  POMODORO
+  STUDY
+  REVISION
+  PRACTICE
+}
+
+model StudyPlan {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  examDate    DateTime?
+  generatedBy String?  // AI or manual
+  planData    Json     // Full schedule data
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  blocks      StudyBlock[]
+}
+
+model StudyBlock {
+  id          String   @id @default(cuid())
+  planId      String
+  plan        StudyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  date        DateTime
+  startTime   DateTime
+  duration    Int      // minutes
+  type        BlockType @default(STUDY)
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum BlockType {
+  STUDY
+  REVISION
+  PRACTICE
+  BREAK
+  EXAM_PREP
+  ASSIGNMENT
+}
+
+model Streak {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastStudyDate   DateTime?
+  weeklyActivity  Json     // Array of 7 booleans
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now())
+}
+
+enum NotificationType {
+  EXAM_UPCOMING
+  TASK_DEADLINE
+  STUDY_REMINDER
+  BREAK_REMINDER
+  SESSION_SCHEDULED
+  STREAK_MILESTONE
+}
+
+model AiConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  mode      AiMode
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  messages  AiMessage[]
+}
+
+enum AiMode {
+  EXPLAIN
+  QUIZ
+  FLASHCARDS
+  SUMMARY
+  STUDY_PLAN
+  PRACTICE
+}
+
+model AiMessage {
+  id              String   @id @default(cuid())
+  conversationId  String
+  conversation    AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role            String   // user, assistant
+  content         String
+  metadata        Json?    // For quiz questions, flashcards, etc.
+  createdAt       DateTime @default(now())
+}
+
+model UserPreferences {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme           Theme    @default(SYSTEM)
+  notifications   Boolean  @default(true)
+  emailReminders  Boolean  @default(false)
+  studyReminders  Boolean  @default(true)
+  breakReminders  Boolean  @default(true)
+  pomodoroWork    Int      @default(25)
+  pomodoroBreak   Int      @default(5)
+  pomodoroLongBreak Int    @default(15)
+  sessionsUntilLongBreak Int @default(4)
+  language        String   @default("en")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
